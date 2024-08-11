@@ -1,0 +1,25 @@
+{
+    "client_type":"claude",
+    "cfig_openai": {
+        "ai_model" : "gpt-4-turbo-preview",
+        "openai_key": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "openai_baseurl": ""
+    },
+    "cfig_claude": {
+        "ai_model" : "claude-3-opus-20240229",
+        "claude_key": "sk-ant-xxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "claude_baseurl": "https://api.anthropic.com/v1"
+    },
+    "cfig_coze": {
+        "end_point": "https://api.coze.com/open_api/v2/chat",
+        "bearer_token": "pat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "stream": true,
+        "bot_id": "1234567890123456789",
+        "user": "user"
+    },
+    "server": {
+        "host": "0.0.0.0",
+        "port": 5000,
+        "secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+}

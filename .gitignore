@@ -1,0 +1,24 @@
+# python generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# venv
+.venv
+
+# logs
+logs/
+
+# db
+**/chatline.db
+**/*.db
+
+# .env
+.env
+.env.local
+
+# minichat
+**/minichat.json
