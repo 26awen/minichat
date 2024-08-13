@@ -91,9 +91,9 @@ def home():
 async def chat(req):
     form_data = await req.form()
     re_post = {
-        "t_id": int(form_data.get("dropdown_tid") or None),
-        "user_id": int(form_data.get("dropdown_username") or None),
-        "role": form_data.get("dropdown_role") or None,
+        "t_id": int(form_data.get("dropdown_tid") or 0),
+        "user_id": int(form_data.get("dropdown_username") or 0),
+        "role": form_data.get("dropdown_role") or "",
         "model": form_data.get("dropdown_model") or "",
         "content": form_data.get("chat_input") or "你好",
     }
