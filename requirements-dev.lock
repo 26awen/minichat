@@ -23,6 +23,10 @@ anyio==4.3.0
     # via anthropic
     # via httpx
     # via openai
+    # via starlette
+    # via watchfiles
+beautifulsoup4==4.12.3
+    # via python-fasthtml
 blinker==1.8.2
     # via flask
 boto3==1.34.152
@@ -39,11 +43,20 @@ charset-normalizer==3.3.2
 click==8.1.7
     # via flask
     # via minichat
+    # via uvicorn
+dill==0.3.8
+    # via unicon
 distro==1.9.0
     # via anthropic
     # via openai
 exceptiongroup==1.2.0
     # via anyio
+fastcore==1.6.8
+    # via fastlite
+    # via python-fasthtml
+    # via sqlite-minutils
+fastlite==0.0.7
+    # via python-fasthtml
 filelock==3.15.4
     # via huggingface-hub
 flask==3.0.3
@@ -62,11 +75,16 @@ gunicorn==22.0.0
     # via minichat
 h11==0.14.0
     # via httpcore
+    # via uvicorn
 httpcore==1.0.4
     # via httpx
+httptools==0.6.1
+    # via uvicorn
 httpx==0.27.0
     # via anthropic
+    # via minichat
     # via openai
+    # via python-fasthtml
 huggingface-hub==0.24.2
     # via tokenizers
 idna==3.6
@@ -77,6 +95,7 @@ init==0.1.0
     # via minichat
 itsdangerous==2.2.0
     # via flask
+    # via python-fasthtml
 jinja2==3.1.4
     # via flask
 jiter==0.5.0
@@ -96,11 +115,16 @@ markupsafe==2.1.5
     # via werkzeug
 mdurl==0.1.2
     # via markdown-it-py
+oauthlib==3.2.2
+    # via python-fasthtml
 openai==1.14.0
     # via minichat
 packaging==24.1
+    # via fastcore
     # via gunicorn
     # via huggingface-hub
+prettytable==3.11.0
+    # via unicon-plugins
 pydantic==2.7.1
     # via anthropic
     # via minichat
@@ -111,14 +135,23 @@ pygments==2.17.2
     # via rich
 python-dateutil==2.9.0.post0
     # via botocore
+    # via python-fasthtml
 python-dotenv==1.0.1
     # via minichat
+    # via uvicorn
+python-fasthtml==0.3.4
+    # via minichat
+python-multipart==0.0.9
+    # via python-fasthtml
 pytz==2024.1
     # via flask-restful
 pyyaml==6.0.1
     # via huggingface-hub
     # via init
-requests==2.31.0
+    # via unicon
+    # via unicon-plugins
+    # via uvicorn
+requests==2.32.3
     # via huggingface-hub
     # via minichat
 rich==13.7.1
@@ -133,10 +166,16 @@ sniffio==1.3.1
     # via anyio
     # via httpx
     # via openai
+soupsieve==2.5
+    # via beautifulsoup4
 sqlalchemy==2.0.30
     # via alembic
     # via flask-alembic
     # via minichat
+sqlite-minutils==3.36.0.post4
+    # via fastlite
+starlette==0.38.2
+    # via python-fasthtml
 terminal==0.4.0
     # via init
 tokenizers==0.19.1
@@ -153,8 +192,24 @@ typing-extensions==4.10.0
     # via pydantic
     # via pydantic-core
     # via sqlalchemy
+    # via uvicorn
+unicon==24.7
+    # via minichat
+    # via unicon-plugins
+unicon-plugins==24.7
+    # via unicon
 urllib3==2.2.1
     # via botocore
     # via requests
+uvicorn==0.30.6
+    # via python-fasthtml
+uvloop==0.19.0
+    # via uvicorn
+watchfiles==0.23.0
+    # via uvicorn
+wcwidth==0.2.13
+    # via prettytable
+websockets==12.0
+    # via uvicorn
 werkzeug==3.0.3
     # via flask
