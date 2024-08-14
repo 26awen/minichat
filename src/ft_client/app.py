@@ -1,6 +1,7 @@
 # from fasthtml import *
 import json
 import asyncio
+import html
 from rich import print
 from fasthtml.common import *
 
@@ -10,7 +11,7 @@ from starlette.responses import StreamingResponse
 
 # App with custom styling to override the pico defaults
 css = Style(
-    ":root { --pico-font-size: 100%; --pico-font-family: Pacifico, cursive;}"
+    ":root { --pico-font-size: 100%; --pico-font-family: Pacifico, -apple-system, cursive, 'LXGWWenKaiMono Nerd Font', BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', STHeiti, 'Microsoft Yahei', Tahoma, Simsun, sans-serif;}"
 )
 js_stream_handler = Script(
     """
@@ -24,13 +25,12 @@ js_stream_handler = Script(
             
             const formData = new FormData();
             formData.append('dropdown_username', document.getElementById('dropdown_username').value);
-            formData.append('dropdown_role', document.getElementById('dropdown_role').value);
+            // formData.append('dropdown_role', document.getElementById('dropdown_role').value);
             formData.append('dropdown_clienttype', document.getElementById('dropdown_clienttype').value);
             formData.append('chat_input', chatInput.value);
 
-            // Add a separator before the new response
-            const separator = '\\n' + '-'.repeat(30) + '\\n';
-            chatOutput.value += separator + 'You: ' + chatInput.value + '\\n\\nAI: ';
+            // Clear previous chat and add the new user input
+            chatOutput.value = 'You: ' + chatInput.value + '\\n\\nAI: ';
             chatOutput.scrollTop = chatOutput.scrollHeight;
 
             fetch('/chat', {
@@ -123,13 +123,22 @@ def Dropdown_role():
 
 def Chat_input():
     return Textarea(
-        id="chat_input", placeholder="Enter your message", rows=12, cols=50
+        id="chat_input",
+        placeholder="Enter your message",
+        rows=12,
+        cols=50,
+        style="resize: none; width: 100%; height: 450px;",
     )
 
 
 def Chat_output():
     return Textarea(
-        id="chat_output", placeholder="Output", rows=12, cols=50, readonly=True
+        id="chat_output",
+        placeholder="Output",
+        rows=12,
+        cols=50,
+        readonly=True,
+        style="resize: none; width: 100%; height: 450px;",
     )
 
 
@@ -149,7 +158,7 @@ def home():
             Div(
                 Dropdown_clienttype(),
                 Dropdown_username(),
-                Dropdown_role(),
+                # Dropdown_role(),
                 # Dropdown_tid(),
                 cls="grid grid-cols-3",
             ),
@@ -187,13 +196,13 @@ async def chat(req):
             else None
         ),
         "user_id": int(form_data.get("dropdown_username") or 0),
-        "role": form_data.get("dropdown_role") or "",
+        # "role": form_data.get("dropdown_role") or "",
         "client_type": (
             form_data.get("dropdown_clienttype")
             if form_data.get("dropdown_clienttype")
             else None
         ),
-        "content": form_data.get("chat_input") or "你好",
+        "content": html.escape(form_data.get("chat_input")) or "你好",
     }
     url = "http://100.99.103.12:5010/chat"
     print(re_post)
