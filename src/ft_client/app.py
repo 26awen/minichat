@@ -127,6 +127,12 @@ def home():
                 id="chat_button",
             ),
             Button(
+                "Continue",
+                id="continue_button",
+                style="background-color: #FFA500; color: white;",
+                disabled=True,  # Initially disabled
+            ),
+            Button(
                 "Slot",
                 id="slot_button",
                 style="background-color: #4CAF50; color: white;",
@@ -142,8 +148,8 @@ async def chat(req):
     form_data = await req.form()
     re_post = {
         "t_id": (
-            int(form_data.get("dropdown_tid"))
-            if form_data.get("dropdown_tid")
+            int(form_data.get("t_id"))
+            if form_data.get("t_id")
             else None
         ),
         "user_id": int(form_data.get("dropdown_username") or 0),
