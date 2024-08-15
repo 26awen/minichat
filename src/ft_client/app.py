@@ -11,10 +11,48 @@ from starlette.responses import StreamingResponse
 
 # App with custom styling to override the pico defaults
 css = Style(
-    ":root { --pico-font-size: 100%; --pico-font-family: Pacifico, -apple-system, cursive, 'LXGWWenKaiMono Nerd Font', BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', STHeiti, 'Microsoft Yahei', Tahoma, Simsun, sans-serif;}"
+    """
+    :root { 
+        --pico-font-size: 100%; 
+        --pico-font-family: Pacifico, -apple-system, cursive, 'LXGWWenKaiMono Nerd Font', BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', STHeiti, 'Microsoft Yahei', Tahoma, Simsun, sans-serif;
+    }
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.4);
+        justify-content: center;
+        align-items: center;
+    }
+    .modal-content {
+        background-color: #fefefe;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px;
+        position: relative;
+    }
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .close:hover,
+    .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    """
 )
 js_stream_handler = Script(
-    """
+    r"""
     document.addEventListener('DOMContentLoaded', function() {
         const chatButton = document.getElementById('chat_button');
         const chatOutput = document.getElementById('chat_output');
@@ -25,12 +63,20 @@ js_stream_handler = Script(
             
             const formData = new FormData();
             formData.append('dropdown_username', document.getElementById('dropdown_username').value);
-            // formData.append('dropdown_role', document.getElementById('dropdown_role').value);
             formData.append('dropdown_clienttype', document.getElementById('dropdown_clienttype').value);
-            formData.append('chat_input', chatInput.value);
+
+            // Get the slot content
+            const slotContent = document.getElementById('slot_textarea').value;
+
+            // Replace the placeholder in the chat input with the slot content
+            let chatInputContent = chatInput.value;
+            chatInputContent = chatInputContent.replace(/\{\s*\{\s*slot\s*\}\s*\}/g, slotContent);
+            // console.log(chatInputContent);
+
+            formData.append('chat_input', chatInputContent);
 
             // Clear previous chat and add the new user input
-            chatOutput.value = 'You: ' + chatInput.value + '\\n\\nAI: ';
+            chatOutput.value = 'You: ' + chatInputContent + '\n\nAI: ';
             chatOutput.scrollTop = chatOutput.scrollHeight;
 
             fetch('/chat', {
@@ -44,7 +90,7 @@ js_stream_handler = Script(
                 function readStream() {
                     reader.read().then(({ done, value }) => {
                         if (done) {
-                            chatOutput.value += '\\n'; // Add a newline at the end of the response
+                            chatOutput.value += '\n'; // Add a newline at the end of the response
                             chatOutput.scrollTop = chatOutput.scrollHeight;
                             return;
                         }
@@ -59,7 +105,7 @@ js_stream_handler = Script(
             })
             .catch(error => {
                 console.error('Error:', error);
-                chatOutput.value += 'Error occurred while fetching response.\\n';
+                chatOutput.value += 'Error occurred while fetching response.\n';
                 chatOutput.scrollTop = chatOutput.scrollHeight;
             });
 
@@ -82,6 +128,26 @@ js_stream_handler = Script(
         } else {
             console.error("Chat input element not found");
         }
+
+        // Modify the variable button and textarea handling
+        const slotButton = document.getElementById('slot_button');
+        const slotModal = document.getElementById('slot_modal');
+        const slotTextarea = document.getElementById('slot_textarea');
+        const closeModal = document.getElementById('close_modal');
+
+        slotButton.addEventListener('click', function() {
+            slotModal.style.display = 'flex';
+        });
+
+        closeModal.addEventListener('click', function() {
+            slotModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', function(event) {
+            if (event.target == slotModal) {
+                slotModal.style.display = 'none';
+            }
+        });
     });
     """
 )
@@ -142,6 +208,25 @@ def Chat_output():
     )
 
 
+def Variable_textarea():
+    return Div(
+        Div(
+            Span("×", cls="close", id="close_modal"),
+            H3("Slot Input"),
+            Textarea(
+                id="slot_textarea",
+                placeholder="Enter slot content",
+                rows=5,
+                cols=50,
+                style="resize: none; width: 100%;",
+            ),
+            cls="modal-content"
+        ),
+        id="slot_modal",
+        cls="modal"
+    )
+
+
 @app.get("/")
 def home():
     return Title("Minichat🦜"), Main(
@@ -176,11 +261,13 @@ def home():
             Button(
                 "Chat",
                 id="chat_button",
-                # hx_post="/chat",
-                # hx_target="#chat_output",
-                # hx_swap="innerHTML",
-                # hx_include="#dropdown_tid, #dropdown_username, #dropdown_role, #dropdown_model, #chat_input",
             ),
+            Button(
+                "Slot",
+                id="slot_button",
+                style="background-color: #4CAF50; color: white;",
+            ),
+            Variable_textarea(),
             cls="container",
         ),
     )
