@@ -74,3 +74,5 @@ class ClientOpenai(ClientBaseDB):
         else:
             self.add_line(user_id, t_id, role, content)
             self.add_line(user_id, t_id, "assistant", assistant_msg)
+
+    # need to add the json response format

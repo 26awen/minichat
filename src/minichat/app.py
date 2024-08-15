@@ -139,7 +139,7 @@ def flask_app():
                             msg, user_id, t_id, role, content
                         )
                     ),
-                    content_type="application/json",
+                    content_type="text/plain",
                 )
             else:
                 return Response(

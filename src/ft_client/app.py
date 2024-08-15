@@ -1,159 +1,23 @@
 # from fasthtml import *
 import json
+import os
 import asyncio
 import html
 from rich import print
 from fasthtml.common import *
+from dotenv import load_dotenv
+load_dotenv()
 
 # import requests
 import httpx
 from starlette.responses import StreamingResponse
+from .custom_css import custom_css
+from .custom_js import custom_js
 
 # App with custom styling to override the pico defaults
-css = Style(
-    """
-    :root { 
-        --pico-font-size: 100%; 
-        --pico-font-family: Pacifico, -apple-system, cursive, 'LXGWWenKaiMono Nerd Font', BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', STHeiti, 'Microsoft Yahei', Tahoma, Simsun, sans-serif;
-    }
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0,0,0,0.4);
-        justify-content: center;
-        align-items: center;
-    }
-    .modal-content {
-        background-color: #fefefe;
-        padding: 20px;
-        border: 1px solid #888;
-        width: 80%;
-        max-width: 500px;
-        position: relative;
-    }
-    .close {
-        color: #aaa;
-        float: right;
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-    .close:hover,
-    .close:focus {
-        color: black;
-        text-decoration: none;
-        cursor: pointer;
-    }
-    """
-)
-js_stream_handler = Script(
-    r"""
-    document.addEventListener('DOMContentLoaded', function() {
-        const chatButton = document.getElementById('chat_button');
-        const chatOutput = document.getElementById('chat_output');
-        const chatInput = document.getElementById('chat_input');
-
-        function handleChatSubmit(event) {
-            event.preventDefault();
-            
-            const formData = new FormData();
-            formData.append('dropdown_username', document.getElementById('dropdown_username').value);
-            formData.append('dropdown_clienttype', document.getElementById('dropdown_clienttype').value);
-
-            // Get the slot content
-            const slotContent = document.getElementById('slot_textarea').value;
-
-            // Replace the placeholder in the chat input with the slot content
-            let chatInputContent = chatInput.value;
-            chatInputContent = chatInputContent.replace(/\{\s*\{\s*slot\s*\}\s*\}/g, slotContent);
-            // console.log(chatInputContent);
-
-            formData.append('chat_input', chatInputContent);
-
-            // Clear previous chat and add the new user input
-            chatOutput.value = 'You: ' + chatInputContent + '\n\nAI: ';
-            chatOutput.scrollTop = chatOutput.scrollHeight;
-
-            fetch('/chat', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-
-                function readStream() {
-                    reader.read().then(({ done, value }) => {
-                        if (done) {
-                            chatOutput.value += '\n'; // Add a newline at the end of the response
-                            chatOutput.scrollTop = chatOutput.scrollHeight;
-                            return;
-                        }
-                        const chunk = decoder.decode(value);
-                        chatOutput.value += chunk;
-                        chatOutput.scrollTop = chatOutput.scrollHeight;
-                        readStream();
-                    });
-                }
-
-                readStream();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                chatOutput.value += 'Error occurred while fetching response.\n';
-                chatOutput.scrollTop = chatOutput.scrollHeight;
-            });
-
-            // Clear the input after sending
-            chatInput.value = '';
-        }
-
-        chatButton.addEventListener('click', handleChatSubmit);
-
-        // Move this to the end of the DOMContentLoaded event listener
-        if (chatInput) {
-            chatInput.addEventListener('keydown', function(event) {
-                console.log("Keydown event triggered");
-                if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-                    console.log("Shortcut triggered");
-                    event.preventDefault();
-                    handleChatSubmit(event);
-                }
-            });
-        } else {
-            console.error("Chat input element not found");
-        }
-
-        // Modify the variable button and textarea handling
-        const slotButton = document.getElementById('slot_button');
-        const slotModal = document.getElementById('slot_modal');
-        const slotTextarea = document.getElementById('slot_textarea');
-        const closeModal = document.getElementById('close_modal');
-
-        slotButton.addEventListener('click', function() {
-            slotModal.style.display = 'flex';
-        });
-
-        closeModal.addEventListener('click', function() {
-            slotModal.style.display = 'none';
-        });
-
-        window.addEventListener('click', function(event) {
-            if (event.target == slotModal) {
-                slotModal.style.display = 'none';
-            }
-        });
-    });
-    """
-)
+css = Style(custom_css)
+js_stream_handler = Script(custom_js)
 app = FastHTML(hdrs=(picolink, css, js_stream_handler))
-
-# count = 0
 
 
 def Dropdown_clienttype():
@@ -220,10 +84,10 @@ def Variable_textarea():
                 cols=50,
                 style="resize: none; width: 100%;",
             ),
-            cls="modal-content"
+            cls="modal-content",
         ),
         id="slot_modal",
-        cls="modal"
+        cls="modal",
     )
 
 
@@ -290,8 +154,9 @@ async def chat(req):
             else None
         ),
         "content": html.escape(form_data.get("chat_input")) or "你好",
+        "response_format": form_data.get("response_format") or "json",
     }
-    url = "http://100.99.103.12:5010/chat"
+    url = os.getenv("BACKEND_URL")
     print(re_post)
 
     async def proxy_generator(url, data):

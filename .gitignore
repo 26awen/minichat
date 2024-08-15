@@ -19,6 +19,8 @@ logs/
 # .env
 .env
 .env.local
+**/.env
+**/.env.local
 
 # minichat
 **/minichat.json

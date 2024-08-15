@@ -102,7 +102,7 @@ class ClientClaude(ClientBaseDB):
                         "chunk": text,
                         "user_id": user_id,
                         "t_id": t_id
-                    })
+                    }) + "\n"
         except Exception as e:
             logger.error("Error when chatting!")
             logger.error(e)
@@ -110,7 +110,7 @@ class ClientClaude(ClientBaseDB):
                 "error": str(e),
                 "user_id": user_id,
                 "t_id": t_id
-            })
+            }) + "\n"
         else:
             self.add_line(user_id, t_id, role, content)
             self.add_line(user_id, t_id, "assistant", assistant_msg)
@@ -118,4 +118,4 @@ class ClientClaude(ClientBaseDB):
                 "final": True,
                 "user_id": user_id,
                 "t_id": t_id
-            })
+            }) + "\n"
