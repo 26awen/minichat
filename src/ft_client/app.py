@@ -91,13 +91,32 @@ def Variable_textarea():
     )
 
 
+def Help_content():
+    return Div(
+        H1("Minichat🦜 Help"),
+        H2("Keyboard Shortcuts"),
+        Ul(
+            Li("Ctrl + Enter (or Cmd + Enter on Mac): Send message"),
+            Li("Alt + Enter: Continue chat"),
+        ),
+        H2("How to Use"),
+        P("1. Select the client type and username from the dropdowns."),
+        P("2. Type your message in the input box."),
+        P("3. Use the 'Chat' button or Ctrl+Enter to send your message."),
+        P("4. To continue the conversation, use the 'Continue' button or Alt+Enter."),
+        P("5. Use the 'Slot' button to input variable content that can be inserted into your message using {{slot}} syntax."),
+        A("Back to Chat", href="/", cls="button"),
+        cls="container",
+    )
+
+
 @app.get("/")
 def home():
     return Title("Minichat🦜"), Main(
         Div(
             H1("Minichat🦜"),
             P(
-                "Welcome to minichat! Talk to the AI with minimun effort.",
+                "Welcome to minichat! Talk to the AI with minimum effort.",
                 id="chat",
             ),
             Hr(),
@@ -107,9 +126,7 @@ def home():
             Div(
                 Dropdown_clienttype(),
                 Dropdown_username(),
-                # Dropdown_role(),
-                # Dropdown_tid(),
-                cls="grid grid-cols-3",
+                cls="grid grid-cols-2 gap-2",
             ),
             cls="container",
         ),
@@ -140,7 +157,16 @@ def home():
             Variable_textarea(),
             cls="container",
         ),
+        Div(
+            A("Help", href="/help", cls="button", style="position: fixed; bottom: 20px; right: 20px; background-color: #f0f0f0; color: #333; border: 1px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease;"),
+            cls="container",
+        ),
     )
+
+
+@app.get("/help")
+def help_page():
+    return Title("Minichat🦜 Help"), Main(Help_content())
 
 
 @app.post("/chat")
