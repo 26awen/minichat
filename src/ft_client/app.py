@@ -6,6 +6,7 @@ import html
 from rich import print
 from fasthtml.common import *
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # import requests
@@ -13,6 +14,8 @@ import httpx
 from starlette.responses import StreamingResponse
 from .custom_css import custom_css
 from .custom_js import custom_js
+
+
 
 # App with custom styling to override the pico defaults
 css = Style(custom_css)
@@ -84,6 +87,11 @@ def Variable_textarea():
                 cols=50,
                 style="resize: none; width: 100%;",
             ),
+            Button(
+                "Insert",
+                id="insert_slot_button",
+                style="margin-top: 10px; background-color: #4CAF50; color: white;",
+            ),
             cls="modal-content",
         ),
         id="slot_modal",
@@ -93,7 +101,14 @@ def Variable_textarea():
 
 def Help_content():
     return Div(
-        H1("Minichat🦜 Help"),
+        H1(
+            "Minichat",
+            Img(
+                src="/public/minichatlogo.png",
+                alt="Minichat Logo",
+                style="height: 1em; vertical-align: middle; margin-bottom: 6px; margin-left: 0;",
+            ),
+        ),
         H2("Keyboard Shortcuts"),
         Ul(
             Li("Ctrl + Enter (or Cmd + Enter on Mac): Send message"),
@@ -104,7 +119,9 @@ def Help_content():
         P("2. Type your message in the input box."),
         P("3. Use the 'Chat' button or Ctrl+Enter to send your message."),
         P("4. To continue the conversation, use the 'Continue' button or Alt+Enter."),
-        P("5. Use the 'Slot' button to input variable content that can be inserted into your message using {{slot}} syntax."),
+        P(
+            "5. Use the 'Slot' button to input variable content that can be inserted into your message using {{slot}} syntax."
+        ),
         A("Back to Chat", href="/", cls="button"),
         cls="container",
     )
@@ -112,9 +129,16 @@ def Help_content():
 
 @app.get("/")
 def home():
-    return Title("Minichat🦜"), Main(
+    return Title("Minichat"), Main(
         Div(
-            H1("Minichat🦜"),
+            H1(
+                "Minichat",
+                Img(
+                    src="/public/minichatlogo.png",
+                    alt="Minichat Logo",
+                    style="height: 1em; vertical-align: middle; margin-bottom: 6px; margin-left: 0;",
+                ),
+            ),
             P(
                 "Welcome to minichat! Talk to the AI with minimum effort.",
                 id="chat",
@@ -158,7 +182,12 @@ def home():
             cls="container",
         ),
         Div(
-            A("Help", href="/help", cls="button", style="position: fixed; bottom: 20px; right: 20px; background-color: #f0f0f0; color: #333; border: 1px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease;"),
+            A(
+                "?",
+                href="/help",
+                cls="button help-button",
+                style="position: fixed; bottom: 12px; right: 12px; background-color: #4a9eff; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease; text-decoration: none;"
+            ),
             cls="container",
         ),
     )
@@ -166,18 +195,14 @@ def home():
 
 @app.get("/help")
 def help_page():
-    return Title("Minichat🦜 Help"), Main(Help_content())
+    return Title("Minichat Help"), Main(Help_content())
 
 
 @app.post("/chat")
 async def chat(req):
     form_data = await req.form()
     re_post = {
-        "t_id": (
-            int(form_data.get("t_id"))
-            if form_data.get("t_id")
-            else None
-        ),
+        "t_id": (int(form_data.get("t_id")) if form_data.get("t_id") else None),
         "user_id": int(form_data.get("dropdown_username") or 0),
         # "role": form_data.get("dropdown_role") or "",
         "client_type": (
@@ -185,7 +210,7 @@ async def chat(req):
             if form_data.get("dropdown_clienttype")
             else None
         ),
-        "content": html.escape(form_data.get("chat_input")) or "你好",
+        "content": html.escape(form_data.get("chat_input")) or "",
         "response_format": form_data.get("response_format") or "json",
     }
     url = os.getenv("BACKEND_URL")
@@ -199,6 +224,9 @@ async def chat(req):
                         # 假设响应是UTF-8编码的
                         yield line.encode("utf-8") + b"\n"
 
-    return StreamingResponse(
-        proxy_generator(url, re_post), media_type="text/plain"
-    )
+    return StreamingResponse(proxy_generator(url, re_post), media_type="text/plain")
+
+
+@app.get("/public/{fname:path}.{ext:static}")
+async def get(fname: str, ext: str):
+    return FileResponse(f"public/{fname}.{ext}")

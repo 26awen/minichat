@@ -9,18 +9,27 @@ custom_js = r"""
         const chatInput = document.getElementById('chat_input');
         const continueButton = document.getElementById('continue_button');
 
-        // Function to update continue button state
-        function updateContinueButtonState() {
-            const userId = localStorage.getItem('currentUserId');
-            const tId = localStorage.getItem('currentTId');
-            continueButton.disabled = !(userId && tId);
+        // Function to update chat and continue button state
+        function updateButtonState() {
+            const inputValue = chatInput.value.trim();
+            chatButton.disabled = inputValue === '';
+            continueButton.disabled = inputValue === '' || !(localStorage.getItem('currentUserId') && localStorage.getItem('currentTId'));
         }
 
         // Call this function initially
-        updateContinueButtonState();
+        updateButtonState();
+
+        // Add event listener to chat input
+        chatInput.addEventListener('input', updateButtonState);
 
         function handleChatSubmit(event) {
             event.preventDefault();
+            
+            // Check if chat is allowed
+            if (chatButton.disabled) {
+                console.log("Chat submit is not allowed at this time");
+                return;
+            }
             
             const formData = new FormData();
             formData.append('dropdown_username', document.getElementById('dropdown_username').value);
@@ -82,7 +91,7 @@ custom_js = r"""
                                     }
 
                                     // Update continue button state after each response
-                                    updateContinueButtonState();
+                                    updateButtonState();
 
                                     if (jsonResponse.chunk) {
                                         chatOutput.value += jsonResponse.chunk;
@@ -128,6 +137,7 @@ custom_js = r"""
                     event.preventDefault();
                     handleChatSubmit(event);
                 }
+
             });
         } else {
             console.error("Chat input element not found");
@@ -138,12 +148,24 @@ custom_js = r"""
         const slotModal = document.getElementById('slot_modal');
         const slotTextarea = document.getElementById('slot_textarea');
         const closeModal = document.getElementById('close_modal');
+        const insertSlotButton = document.getElementById('insert_slot_button');
 
         slotButton.addEventListener('click', function() {
             slotModal.style.display = 'flex';
         });
 
         closeModal.addEventListener('click', function() {
+            slotModal.style.display = 'none';
+        });
+
+        insertSlotButton.addEventListener('click', function() {
+            const chatInput = document.getElementById('chat_input');
+            const cursorPos = chatInput.selectionStart;
+            const textBefore = chatInput.value.substring(0, cursorPos);
+            const textAfter = chatInput.value.substring(cursorPos);
+            chatInput.value = textBefore + '{{ slot }}' + textAfter;
+            chatInput.focus();
+            chatInput.selectionStart = chatInput.selectionEnd = cursorPos + 10; // 10 is the length of '{{ slot }}'
             slotModal.style.display = 'none';
         });
 
@@ -222,7 +244,7 @@ custom_js = r"""
                                     }
 
                                     // Update continue button state after each response
-                                    updateContinueButtonState();
+                                    updateButtonState();
 
                                     if (jsonResponse.chunk) {
                                         chatOutput.value += jsonResponse.chunk;
@@ -257,20 +279,5 @@ custom_js = r"""
         }
 
         continueButton.addEventListener('click', handleContinueChat);
-
-        // Remove this duplicate event listener
-        // if (chatInput) {
-        //     chatInput.addEventListener('keydown', function(event) {
-        //         if (event.altKey && event.key === 'Enter') {
-        //             event.preventDefault();
-        //             handleContinueChat(event);
-        //         } else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-        //             event.preventDefault();
-        //             handleChatSubmit(event);
-        //         }
-        //     });
-        // } else {
-        //     console.error("Chat input element not found");
-        // }
     });
 """
