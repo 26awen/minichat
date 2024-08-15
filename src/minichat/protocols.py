@@ -23,7 +23,12 @@ from sqlalchemy.engine import Engine
 
 class SupportMinichat(Protocol):
     def add_line(
-        self, db_engine: Engine, user_id: int, t_id: int, role: str, content: str
+        self,
+        db_engine: Engine,
+        user_id: int,
+        t_id: int,
+        role: str,
+        content: str,
     ): ...
 
     def get_lines(
@@ -47,15 +52,35 @@ class SupportMinichat(Protocol):
     ): ...
 
     def make_chat(
-        self, history_msgs: Any, user_id: int, t_id: int, role: str, content: str
+        self,
+        history_msgs: Any,
+        user_id: int,
+        t_id: int,
+        role: str,
+        content: str,
+    ) -> Any: ...
+
+    def make_chat_json(
+        self,
+        history_msgs: Any,
+        user_id: int,
+        t_id: int,
+        role: str,
+        content: str,
     ) -> Any: ...
 
 
 MC_T = TypeVar("MC_T", bound=SupportMinichat)
 
+
 class SupportMinichatDB(Protocol):
     def add_line(
-        self, db_engine: Engine, user_id: int, t_id: int, role: str, content: str
+        self,
+        db_engine: Engine,
+        user_id: int,
+        t_id: int,
+        role: str,
+        content: str,
     ): ...
 
     def get_lines(
@@ -78,31 +103,47 @@ class SupportMinichatDB(Protocol):
         # content: str = "",
     ): ...
 
+
 MCDB_T = TypeVar("MCDB_T", bound=SupportMinichatDB)
+
 
 class SupportChat(Protocol):
     def make_chat(
-        self, history_msgs: Any, user_id: int, t_id: int, role: str, content: str
+        self,
+        history_msgs: Any,
+        user_id: int,
+        t_id: int,
+        role: str,
+        content: str,
     ) -> Any: ...
 
+    def make_chat_json(
+        self,
+        history_msgs: Any,
+        user_id: int,
+        t_id: int,
+        role: str,
+        content: str,
+    ) -> Any: ...
+
+
 C_T = TypeVar("C_T", bound=SupportChat)
+
 
 class ClientBaseDB:
     def __init__(self, cfig: Config, engine: Engine):
         self.cfig = cfig
         self.engine = engine
 
-    def add_line(
-        self,  user_id: int, t_id: int, role: str, content: str
-    ):
+    def add_line(self, user_id: int, t_id: int, role: str, content: str):
         with Session(self.engine) as session:
-            chat_line = ChatLine(role=role, content=content, t_id=t_id, user_id=user_id)
+            chat_line = ChatLine(
+                role=role, content=content, t_id=t_id, user_id=user_id
+            )
             session.add(chat_line)
             session.commit()
 
-    def get_lines(
-        self, user_id: int, t_id: int, orderred: bool = True
-    ):
+    def get_lines(self, user_id: int, t_id: int, orderred: bool = True):
         session = Session(self.engine)
         if orderred:
             stmt = (
@@ -128,7 +169,9 @@ class ClientBaseDB:
             raise TypeError("'where' must be attribute of ChatLine")
         else:
             with Session(self.engine) as session:
-                stmt = update(ChatLine).where(target_by == target).values(**kwargs)
+                stmt = (
+                    update(ChatLine).where(target_by == target).values(**kwargs)
+                )
                 session.execute(stmt)
                 session.commit()
 
