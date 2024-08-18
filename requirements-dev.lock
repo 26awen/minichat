@@ -117,6 +117,7 @@ mdurl==0.1.2
     # via markdown-it-py
 oauthlib==3.2.2
     # via python-fasthtml
+    # via requests-oauthlib
 openai==1.14.0
     # via minichat
 packaging==24.1
@@ -153,6 +154,9 @@ pyyaml==6.0.1
     # via uvicorn
 requests==2.32.3
     # via huggingface-hub
+    # via minichat
+    # via requests-oauthlib
+requests-oauthlib==2.0.0
     # via minichat
 rich==13.7.1
     # via minichat

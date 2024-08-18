@@ -63,12 +63,15 @@ custom_css = """
     @keyframes pulse {
         0% {
             transform: scale(1);
+            background-color: #4a9eff;
         }
         50% {
             transform: scale(1.05);
+            background-color: #3080ff;
         }
         100% {
             transform: scale(1);
+            background-color: #4a9eff;
         }
     }
 """
