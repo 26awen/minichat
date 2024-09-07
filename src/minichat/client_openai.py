@@ -1,4 +1,5 @@
 from typing import Any
+import json
 
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
@@ -75,4 +76,52 @@ class ClientOpenai(ClientBaseDB):
             self.add_line(user_id, t_id, role, content)
             self.add_line(user_id, t_id, "assistant", assistant_msg)
 
-    # need to add the json response format
+    def make_chat_json(self, history_msgs: Any, user_id: int, t_id: int, role: str, content: str):
+        logger.opt(colors=True).debug(
+            mwrapper(f"Chat with config:{self.cfig}", "green")
+        )
+        client = OpenAI(
+            api_key=self.cfig.cfig_openai.openai_key,
+            base_url=self.cfig.cfig_openai.openai_baseurl
+            if self.cfig.cfig_openai.openai_baseurl != ""
+            else None,
+        )
+
+        history_msgs.append({"role": role, "content": content})
+
+        logger.opt(colors=True).debug(
+            mwrapper("History messages include the new request message:", "green")
+        )
+        logger.opt(colors=True).debug(history_msgs)
+
+        assistant_msg = ""
+        try:
+            stream = client.chat.completions.create(
+                model=self.cfig.cfig_openai.model,
+                messages=history_msgs,
+                stream=True,
+            )
+            for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    assistant_msg += chunk.choices[0].delta.content
+                    yield json.dumps({
+                        "chunk": chunk.choices[0].delta.content,
+                        "user_id": user_id,
+                        "t_id": t_id
+                    }) + "\n"
+        except Exception as e:
+            logger.error("Error when chatting!")
+            logger.error(e)
+            yield json.dumps({
+                "error": str(e),
+                "user_id": user_id,
+                "t_id": t_id
+            }) + "\n"
+        else:
+            self.add_line(user_id, t_id, role, content)
+            self.add_line(user_id, t_id, "assistant", assistant_msg)
+            yield json.dumps({
+                "final": True,
+                "user_id": user_id,
+                "t_id": t_id
+            }) + "\n"

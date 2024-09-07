@@ -23,12 +23,12 @@ GOOGLE_TOKEN_URL = os.getenv("GOOGLE_TOKEN_URL")
 WebFrameApp = Flask | FastHTML
 
 
-class GithubOAuthMaker:
+class GoogleOAuthMaker:
     def __init__(self, app: WebFrameApp, config: dict = {}, *args, **kwargs):
         """
-        Initialize the GithubOAuthMaker.
+        Initialize the GoogleOAuthMaker.
 
-        This class sets up OAuth2 authentication with GitHub for a Flask application.
+        This class sets up OAuth2 authentication with Google for a Flask application.
 
         Args:
             app (Flask): The Flask application instance.
@@ -37,10 +37,10 @@ class GithubOAuthMaker:
 
         Attributes:
             app (Flask): The Flask application instance.
-            client_id (str): GitHub OAuth client ID.
-            client_secret (str): GitHub OAuth client secret.
-            authorization_base_url (str): GitHub's authorization URL.
-            token_url (str): GitHub's token URL.
+            client_id (str): Google OAuth client ID.
+            client_secret (str): Google OAuth client secret.
+            authorization_base_url (str): Google's authorization URL.
+            token_url (str): Google's token URL.
             metadata (dict): A dictionary to store OAuth-related metadata.
         """
         super().__init__(*args, **kwargs)
@@ -54,10 +54,12 @@ class GithubOAuthMaker:
         self.metadata = {}
         self.login_required = None
 
-    def make_oauth_routes(self): 
+    def make_oauth_routes(self):
         if isinstance(self.app, Flask):
 
-            @self.app.route(self.config.get("routes", {}).get("login", "/login"))
+            @self.app.route(
+                self.config.get("routes", {}).get("login", "/login")
+            )
             def login():
                 """Step 1: User Authorization.
 
@@ -71,7 +73,9 @@ class GithubOAuthMaker:
                         "https://www.googleapis.com/auth/userinfo.profile",
                     ],
                     redirect_uri="http://localhost:8010"
-                    + self.config.get("routes", {}).get("callback", "/login/callback"),
+                    + self.config.get("routes", {}).get(
+                        "callback", "/login/callback"
+                    ),
                 )
                 authorization_url, state = google.authorization_url(
                     self.authorization_base_url
@@ -83,7 +87,9 @@ class GithubOAuthMaker:
 
             # Step 2: User authorization, this happens on the provider.
             @self.app.route(
-                self.config.get("routes", {}).get("callback", "/login/callback"),
+                self.config.get("routes", {}).get(
+                    "callback", "/login/callback"
+                ),
                 methods=["GET"],
             )
             def callback():
@@ -98,7 +104,9 @@ class GithubOAuthMaker:
                     self.client_id,
                     state=flask.session["oauth_state"],
                     redirect_uri="http://localhost:8010"
-                    + self.config.get("routes", {}).get("callback", "/login/callback"),
+                    + self.config.get("routes", {}).get(
+                        "callback", "/login/callback"
+                    ),
                 )
                 token = google.fetch_token(
                     self.token_url,
@@ -125,11 +133,15 @@ class GithubOAuthMaker:
                     self.client_id, token=flask.session["oauth_token"]
                 )
                 return jsonify(
-                    google.get("https://www.googleapis.com/oauth2/v1/userinfo").json()
+                    google.get(
+                        "https://www.googleapis.com/oauth2/v1/userinfo"
+                    ).json()
                 )
 
             @self.app.route(
-                self.config.get("routes", {}).get("profile_emails", "/profile/emails"),
+                self.config.get("routes", {}).get(
+                    "profile_emails", "/profile/emails"
+                ),
                 methods=["GET"],
             )
             def profile_emails():
@@ -161,7 +173,9 @@ class GithubOAuthMaker:
                 return "Logged out"
 
             @self.app.route(
-                self.config.get("routes", {}).get("get_userdata", "/user/get_userdata"),
+                self.config.get("routes", {}).get(
+                    "get_userdata", "/user/get_userdata"
+                ),
                 methods=["GET"],
             )
             def get_userdata():
@@ -199,30 +213,40 @@ class GithubOAuthMaker:
                     name=name,
                     avatar_url=avatar_url,
                 ).model_dump_json()
-           
-        
+
     def login_required(self, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             # Check if the token exists
-            if 'oauth_token' not in flask.session:
-                return flask.redirect(flask.url_for('.login', next=flask.request.url))
-            
+            if "oauth_token" not in flask.session:
+                return flask.redirect(
+                    flask.url_for(".login", next=flask.request.url)
+                )
+
             # Check token expiration
-            token = flask.session['oauth_token']
-            if 'expires_at' in token and datetime.fromtimestamp(token['expires_at']) < datetime.now():
+            token = flask.session["oauth_token"]
+            if (
+                "expires_at" in token
+                and datetime.fromtimestamp(token["expires_at"]) < datetime.now()
+            ):
                 # Token has expired, clear session and redirect to login
                 flask.session.clear()
-                return flask.redirect(flask.url_for('.login', next=flask.request.url))
-            
+                return flask.redirect(
+                    flask.url_for(".login", next=flask.request.url)
+                )
+
             # Optionally, refresh the token if it's close to expiration
-            if 'expires_at' in token and datetime.fromtimestamp(token['expires_at']) - datetime.now() < timedelta(minutes=5):
+            if "expires_at" in token and datetime.fromtimestamp(
+                token["expires_at"]
+            ) - datetime.now() < timedelta(minutes=5):
                 try:
                     google = OAuth2Session(
                         self.client_id,
                         state=flask.session["oauth_state"],
                         redirect_uri="http://localhost:8010"
-                        + self.config.get("routes", {}).get("callback", "/login/callback"),
+                        + self.config.get("routes", {}).get(
+                            "callback", "/login/callback"
+                        ),
                     )
                     token = google.fetch_token(
                         self.token_url,
@@ -230,25 +254,27 @@ class GithubOAuthMaker:
                         authorization_response=flask.request.url,
                         expires_in=3600 * 2,
                     )
-                    flask.session['oauth_token'] = token
+                    flask.session["oauth_token"] = token
                 except Exception as e:
                     app.logger.error(f"Token refresh failed: {str(e)}")
                     flask.session.clear()
-                    return flask.redirect(flask.url_for('.login', next=flask.request.url))
-            
+                    return flask.redirect(
+                        flask.url_for(".login", next=flask.request.url)
+                    )
+
             # Check for required scopes (if applicable)
             # required_scopes = app.config.get('REQUIRED_SCOPES', [])
             # if not all(scope in token.get('scope', '').split() for scope in required_scopes):
             #     return flask.abort(403, description="Insufficient permissions")
-            
+
             return func(*args, **kwargs)
+
         return wrapper
-        
 
 
 if __name__ == "__main__":
     # This allows us to use a plain HTTP callback
-    google_oauth_maker = GithubOAuthMaker(app)
+    google_oauth_maker = GoogleOAuthMaker(app)
     google_oauth_maker.make_oauth_routes()
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 

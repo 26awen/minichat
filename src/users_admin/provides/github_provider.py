@@ -52,9 +52,13 @@ class GithubOAuthMaker:
         self.config = config
         self.metadata = {}
         self.login_required = None
+
     def make_oauth_routes(self):
         if isinstance(self.app, Flask):
-            @self.app.route(self.config.get("routes", {}).get("login", "/login"))
+
+            @self.app.route(
+                self.config.get("routes", {}).get("login", "/login")
+            )
             def login():
                 """Step 1: User Authorization.
 
@@ -66,13 +70,15 @@ class GithubOAuthMaker:
                     self.authorization_base_url
                 )
 
-            # State is used to prevent CSRF, keep this for later.
+                # State is used to prevent CSRF, keep this for later.
                 flask.session["oauth_state"] = state
                 return flask.redirect(authorization_url)
 
             # Step 2: User authorization, this happens on the provider.
             @self.app.route(
-                self.config.get("routes", {}).get("callback", "/login/callback"),
+                self.config.get("routes", {}).get(
+                    "callback", "/login/callback"
+                ),
                 methods=["GET"],
             )
             def callback():
@@ -84,13 +90,18 @@ class GithubOAuthMaker:
                 """
 
                 github = OAuth2Session(
-                    self.client_id, state=flask.session["oauth_state"]
+                    self.client_id,
+                    state=flask.session["oauth_state"],
+                    redirect_uri="http://localhost:8010"
+                    + self.config.get("routes", {}).get(
+                        "callback", "/login/callback"
+                    ),
                 )
                 token = github.fetch_token(
                     self.token_url,
                     client_secret=self.client_secret,
                     authorization_response=flask.request.url,
-                    expires_in=3600*2,
+                    expires_in=3600 * 2,
                 )
 
                 # At this point you can fetch protected resources but lets save
@@ -140,7 +151,9 @@ class GithubOAuthMaker:
                 return "Logged out"
 
             @self.app.route(
-                self.config.get("routes", {}).get("get_userdata", "/user/get_userdata"),
+                self.config.get("routes", {}).get(
+                    "get_userdata", "/user/get_userdata"
+                ),
                 methods=["GET"],
             )
             def get_userdata():
@@ -148,10 +161,26 @@ class GithubOAuthMaker:
                     self.client_id, token=flask.session["oauth_token"]
                 )
                 provider = self.provider
-                provider_user_id = str(github.get("https://api.github.com/user").json().get("id", ""))
-                email = github.get("https://api.github.com/user/emails").json()[0].get("email", "")
-                name = github.get("https://api.github.com/user").json().get("login", "")
-                avatar_url = github.get("https://api.github.com/user").json().get("avatar_url", "")
+                provider_user_id = str(
+                    github.get("https://api.github.com/user")
+                    .json()
+                    .get("id", "")
+                )
+                email = (
+                    github.get("https://api.github.com/user/emails")
+                    .json()[0]
+                    .get("email", "")
+                )
+                name = (
+                    github.get("https://api.github.com/user")
+                    .json()
+                    .get("login", "")
+                )
+                avatar_url = (
+                    github.get("https://api.github.com/user")
+                    .json()
+                    .get("avatar_url", "")
+                )
                 provider_unique_id = provider + ":" + provider_user_id
                 return Userdata(
                     provider=provider,
@@ -159,32 +188,42 @@ class GithubOAuthMaker:
                     provider_unique_id=provider_unique_id,
                     email=email,
                     name=name,
-                    avatar_url=avatar_url
+                    avatar_url=avatar_url,
                 ).model_dump()
-
 
     def login_required(self, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             # Check if the token exists
-            if 'oauth_token' not in flask.session:
-                return flask.redirect(flask.url_for('.login', next=flask.request.url))
-            
+            if "oauth_token" not in flask.session:
+                return flask.redirect(
+                    flask.url_for(".login", next=flask.request.url)
+                )
+
             # Check token expiration
-            token = flask.session['oauth_token']
-            if 'expires_at' in token and datetime.fromtimestamp(token['expires_at']) < datetime.now():
+            token = flask.session["oauth_token"]
+            if (
+                "expires_at" in token
+                and datetime.fromtimestamp(token["expires_at"]) < datetime.now()
+            ):
                 # Token has expired, clear session and redirect to login
                 flask.session.clear()
-                return flask.redirect(flask.url_for('.login', next=flask.request.url))
-            
+                return flask.redirect(
+                    flask.url_for(".login", next=flask.request.url)
+                )
+
             # Optionally, refresh the token if it's close to expiration
-            if 'expires_at' in token and datetime.fromtimestamp(token['expires_at']) - datetime.now() < timedelta(minutes=5):
+            if "expires_at" in token and datetime.fromtimestamp(
+                token["expires_at"]
+            ) - datetime.now() < timedelta(minutes=5):
                 try:
                     github = OAuth2Session(
                         self.client_id,
                         state=flask.session["oauth_state"],
                         redirect_uri="http://localhost:8010"
-                        + self.config.get("routes", {}).get("callback", "/login/callback"),
+                        + self.config.get("routes", {}).get(
+                            "callback", "/login/callback"
+                        ),
                     )
                     token = github.fetch_token(
                         self.token_url,
@@ -192,20 +231,22 @@ class GithubOAuthMaker:
                         authorization_response=flask.request.url,
                         expires_in=3600 * 2,
                     )
-                    flask.session['oauth_token'] = token
+                    flask.session["oauth_token"] = token
                 except Exception as e:
                     app.logger.error(f"Token refresh failed: {str(e)}")
                     flask.session.clear()
-                    return flask.redirect(flask.url_for('.login', next=flask.request.url))
-            
+                    return flask.redirect(
+                        flask.url_for(".login", next=flask.request.url)
+                    )
+
             # Check for required scopes (if applicable)
             # required_scopes = app.config.get('REQUIRED_SCOPES', [])
             # if not all(scope in token.get('scope', '').split() for scope in required_scopes):
             #     return flask.abort(403, description="Insufficient permissions")
-            
+
             return func(*args, **kwargs)
+
         return wrapper
-        
 
 
 if __name__ == "__main__":

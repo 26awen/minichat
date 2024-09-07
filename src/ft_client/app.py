@@ -25,8 +25,8 @@ app = FastHTML(hdrs=(picolink, css, js_stream_handler))
 
 def Dropdown_clienttype():
     return Select(
-        Option("claude", value="claude"),
         Option("openai", value="openai"),
+        Option("claude", value="claude"),
         Option("coze", value="coze"),
         id="dropdown_clienttype",
     )
