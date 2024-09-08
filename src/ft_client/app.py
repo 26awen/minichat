@@ -264,17 +264,15 @@ async def chat(req):
 async def get(fname: str, ext: str):
     return FileResponse(f"public/{fname}.{ext}")
 
-from users_admin.provides.github_provider import GithubProvider
-from users_admin.provides.google_provider import GoogleProvider
 
-@app.get("/login/{provider}")
-async def login(provider: str):
-    # This is a placeholder. You'll need to implement actual OAuth flow.
-    if provider == "github":
-        github_provider = GithubProvider()
-        return RedirectResponse(url=github_provider.get_authorization_url())
-    elif provider == "google":
-        google_provider = GoogleProvider()
-        return RedirectResponse(url=google_provider.get_authorization_url())
-    else:
-        return {"error": "Invalid provider"}
+# @app.get("/login/{provider}")
+# async def login(provider: str):
+#     # This is a placeholder. You'll need to implement actual OAuth flow.
+#     if provider == "github":
+#         github_provider = GithubProvider()
+#         return RedirectResponse(url=github_provider.get_authorization_url())
+#     elif provider == "google":
+#         google_provider = GoogleProvider()
+#         return RedirectResponse(url=google_provider.get_authorization_url())
+#     else:
+#         return {"error": "Invalid provider"}
