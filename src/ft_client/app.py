@@ -11,7 +11,7 @@ load_dotenv()
 
 import requests
 import httpx
-from starlette.responses import StreamingResponse
+from starlette.responses import StreamingResponse, RedirectResponse
 from .custom_css import custom_css
 from .custom_js import custom_js
 
@@ -25,9 +25,9 @@ app = FastHTML(hdrs=(picolink, css, js_stream_handler))
 
 def Dropdown_clienttype():
     return Select(
-        Option("openai", value="openai"),
-        Option("claude", value="claude"),
-        Option("coze", value="coze"),
+        Option("openai-gpt-4o-mini", value="openai"),
+        Option("claude-3-5-sonnet-20240620", value="claude"),
+        Option("coze-gpt-4o", value="coze"),
         id="dropdown_clienttype",
     )
 
@@ -71,7 +71,7 @@ def Chat_output():
         rows=12,
         cols=50,
         readonly=True,
-        style="resize: none; width: 100%; height: 450px; background-color: #f0f0f0; font-size: 12px;",
+        style="resize: none; width: 100%; height: 450px; background-color: #f0f0f0; color: #333; font-size: 13px;",
     )
 
 
@@ -127,10 +127,27 @@ def Help_content():
     )
 
 
+def Login_dropdown():
+    return Div(
+        Div(
+            "Login",
+            cls="dropbtn",
+        ),
+        Div(
+            A("GitHub", href="/login/github", cls="login-option github"),
+            A("Google", href="/login/google", cls="login-option google"),
+            cls="dropdown-content",
+        ),
+        cls="dropdown",
+        style="position: absolute; top: 10px; right: 10px;"
+    )
+
+
 @app.get("/")
 def home():
     return Title("Minichat"), Main(
         Div(
+            Login_dropdown(),  # Add login dropdown to the top-right corner
             H1(
                 "Minichat",
                 Img(
@@ -145,6 +162,7 @@ def home():
             ),
             Hr(),
             cls="container",
+            style="position: relative;"  # Add this to make absolute positioning work
         ),
         Div(
             Div(
@@ -245,3 +263,18 @@ async def chat(req):
 @app.get("/public/{fname:path}.{ext:static}")
 async def get(fname: str, ext: str):
     return FileResponse(f"public/{fname}.{ext}")
+
+from users_admin.provides.github_provider import GithubProvider
+from users_admin.provides.google_provider import GoogleProvider
+
+@app.get("/login/{provider}")
+async def login(provider: str):
+    # This is a placeholder. You'll need to implement actual OAuth flow.
+    if provider == "github":
+        github_provider = GithubProvider()
+        return RedirectResponse(url=github_provider.get_authorization_url())
+    elif provider == "google":
+        google_provider = GoogleProvider()
+        return RedirectResponse(url=google_provider.get_authorization_url())
+    else:
+        return {"error": "Invalid provider"}

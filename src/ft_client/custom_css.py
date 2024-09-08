@@ -75,3 +75,66 @@ custom_css = """
         }
     }
 """
+
+custom_css += """
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropbtn {
+    background-color: #24292e;
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+    width: 120px;
+    text-align: center;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #f9f9f9;
+    min-width: 120px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 4px;
+}
+
+.dropdown-content a {
+    color: white;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    text-align: center;
+}
+
+.login-option {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.login-option.github {
+    background-color: #24292e;
+}
+
+.login-option.google {
+    background-color: #4285F4;
+}
+
+.dropdown-content a:hover {
+    opacity: 0.8;
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+.dropdown:hover .dropbtn {
+    opacity: 0.8;
+}
+"""

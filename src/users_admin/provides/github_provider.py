@@ -6,7 +6,7 @@ from flask import Flask
 import flask
 from flask.json import jsonify
 from dotenv import load_dotenv
-
+import requests
 load_dotenv()
 from users_admin.provides.userdata import Userdata
 from users_admin.provides.apptypes import WebFrameApp
@@ -19,8 +19,6 @@ GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
 GITHUB_AUTHORIZATION_BASE_URL = os.getenv("GITHUB_AUTHORIZATION_BASE_URL")
 GITHUB_TOKEN_URL = os.getenv("GITHUB_TOKEN_URL")
-
-
 
 
 class GithubOAuthMaker:
@@ -52,6 +50,8 @@ class GithubOAuthMaker:
         self.token_url = GITHUB_TOKEN_URL
         self.config = config
         self.metadata = {}
+        
+        self.url_prefix = self.config.get("routes", {}).get("prefix", "/users")
 
     def make_oauth_routes(self):
         """
@@ -60,9 +60,13 @@ class GithubOAuthMaker:
         if isinstance(self.app, Flask):
 
             @self.app.route(
-                self.config.get("routes", {}).get("login", "/login")
+                self.url_prefix + self.config.get("routes", {}).get("login_action", "/login_action")
             )
-            def login():
+            def login_action():
+                # Check if the user is already authenticated
+                if "oauth_token" in flask.session:
+                    flask.session.clear()
+
                 # Step 1: User Authorization.
 
                 # Redirect the user/resource owner to the OAuth provider (i.e. Github)
@@ -78,7 +82,7 @@ class GithubOAuthMaker:
 
             # Step 2: User authorization, this happens on the provider.
             @self.app.route(
-                self.config.get("routes", {}).get(
+                self.url_prefix + self.config.get("routes", {}).get(
                     "callback", "/login/callback"
                 ),
                 methods=["GET"],
@@ -94,7 +98,7 @@ class GithubOAuthMaker:
                     self.client_id,
                     state=flask.session["oauth_state"],
                     redirect_uri="http://localhost:8010"
-                    + self.config.get("routes", {}).get(
+                    + self.url_prefix + self.config.get("routes", {}).get(
                         "callback", "/login/callback"
                     ),
                 )
@@ -113,141 +117,162 @@ class GithubOAuthMaker:
                 return flask.redirect(flask.url_for(".profile"))
 
             @self.app.route(
-                self.config.get("routes", {}).get("profile", "/profile"),
+                self.url_prefix + self.config.get("routes", {}).get("profile", "/profile"),
                 methods=["GET"],
             )
             def profile():
                 """Fetching a protected resource using an OAuth 2 token."""
-                github = OAuth2Session(
-                    self.client_id, token=flask.session["oauth_token"]
-                )
-                return jsonify(github.get("https://api.github.com/user").json())
+                try:
+                    github = OAuth2Session(
+                        self.client_id, token=flask.session["oauth_token"]
+                    )
+                    return jsonify(
+                        github.get("https://api.github.com/user").json()
+                    )
+                except Exception as e:
+                    flask.session.clear()
+                    return flask.redirect(flask.url_for(".login_action"))
 
             @self.app.route(
-                self.config.get("routes", {}).get(
+                self.url_prefix + self.config.get("routes", {}).get(
                     "profile_emails", "/profile/emails"
                 ),
                 methods=["GET"],
             )
             def profile_emails():
                 """Fetching a protected resource using an OAuth 2 token."""
-                github = OAuth2Session(
-                    self.client_id, token=flask.session["oauth_token"]
-                )
-                return jsonify(
-                    github.get("https://api.github.com/user/emails").json()
-                )
+                try:
+                    github = OAuth2Session(
+                        self.client_id, token=flask.session["oauth_token"]
+                    )
+                    return jsonify(
+                        github.get("https://api.github.com/user/emails").json()
+                    )
+                except Exception as e:
+                    flask.session.clear()
+                    return flask.redirect(flask.url_for(".login_action"))
 
             @self.app.route(
-                self.config.get("routes", {}).get("logout", "/logout"),
+                self.url_prefix + self.config.get("routes", {}).get("logout_action", "/logout_action"),
                 methods=["GET"],
             )
-            def logout():
-                """Logout the user."""
-                github = OAuth2Session(
-                    self.client_id, token=flask.session["oauth_token"]
-                )
-                github.access_token = None
+            def logout_action():
+                """Logout the user and revoke GitHub token."""
+                if "oauth_token" in flask.session:
+                    access_token = flask.session["oauth_token"].get("access_token")
+                    if access_token:
+                        # Revoke the GitHub token
+                        requests.delete(
+                            f"https://api.github.com/applications/{self.client_id}/token",
+                            auth=(self.client_id, self.client_secret),
+                            json={"access_token": access_token}
+                        )
+                # Clear the local session
                 flask.session.clear()
-                return "Logged out"
+                # Redirect to home or login page
+                return flask.redirect(flask.url_for(".login_action"))
 
             @self.app.route(
-                self.config.get("routes", {}).get(
-                    "get_userdata", "/user/get_userdata"
+                self.url_prefix + self.config.get("routes", {}).get(
+                    "get_userdata", "/get_userdata"
                 ),
                 methods=["GET"],
             )
             def get_userdata():
-                github = OAuth2Session(
-                    self.client_id, token=flask.session["oauth_token"]
-                )
-                provider = self.provider
-                provider_user_id = str(
-                    github.get("https://api.github.com/user")
-                    .json()
-                    .get("id", "")
-                )
-                email = (
-                    github.get("https://api.github.com/user/emails")
-                    .json()[0]
-                    .get("email", "")
-                )
-                name = (
-                    github.get("https://api.github.com/user")
-                    .json()
-                    .get("login", "")
-                )
-                avatar_url = (
-                    github.get("https://api.github.com/user")
-                    .json()
-                    .get("avatar_url", "")
-                )
-                provider_unique_id = provider + ":" + provider_user_id
-                return Userdata(
-                    provider=provider,
-                    provider_user_id=provider_user_id,
-                    provider_unique_id=provider_unique_id,
-                    email=email,
-                    name=name,
-                    avatar_url=avatar_url,
-                ).model_dump()
-
-    def login_required(self, func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            # Check if the token exists
-            if "oauth_token" not in flask.session:
-                return flask.redirect(
-                    flask.url_for(".login", next=flask.request.url)
-                )
-
-            # Check token expiration
-            token = flask.session["oauth_token"]
-            if (
-                "expires_at" in token
-                and datetime.fromtimestamp(token["expires_at"]) < datetime.now()
-            ):
-                # Token has expired, clear session and redirect to login
-                flask.session.clear()
-                return flask.redirect(
-                    flask.url_for(".login", next=flask.request.url)
-                )
-
-            # Optionally, refresh the token if it's close to expiration
-            if "expires_at" in token and datetime.fromtimestamp(
-                token["expires_at"]
-            ) - datetime.now() < timedelta(minutes=5):
                 try:
                     github = OAuth2Session(
-                        self.client_id,
-                        state=flask.session["oauth_state"],
-                        redirect_uri="http://localhost:8010"
-                        + self.config.get("routes", {}).get(
-                            "callback", "/login/callback"
-                        ),
+                        self.client_id, token=flask.session["oauth_token"]
                     )
-                    token = github.fetch_token(
-                        self.token_url,
-                        client_secret=self.client_secret,
-                        authorization_response=flask.request.url,
-                        expires_in=3600 * 2,
+                    provider = self.provider
+                    provider_user_id = str(
+                        github.get("https://api.github.com/user")
+                        .json()
+                        .get("id", "")
                     )
-                    flask.session["oauth_token"] = token
+                    email = (
+                        github.get("https://api.github.com/user/emails")
+                        .json()[0]
+                        .get("email", "")
+                    )
+                    name = (
+                        github.get("https://api.github.com/user")
+                        .json()
+                        .get("login", "")
+                    )
+                    avatar_url = (
+                        github.get("https://api.github.com/user")
+                        .json()
+                        .get("avatar_url", "")
+                    )
+                    provider_unique_id = provider + ":" + provider_user_id
+                    return Userdata(
+                        provider=provider,
+                        provider_user_id=provider_user_id,
+                        provider_unique_id=provider_unique_id,
+                        email=email,
+                        name=name,
+                        avatar_url=avatar_url,
+                    ).model_dump()
                 except Exception as e:
-                    app.logger.error(f"Token refresh failed: {str(e)}")
+                    flask.session.clear()
+                    return jsonify({"error": str(e)}), 500
+
+        def login_required(self, func):
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                # Check if the token exists
+                if "oauth_token" not in flask.session:
+                    return flask.redirect(
+                        flask.url_for(".login", next=flask.request.url)
+                    )
+
+                # Check token expiration
+                token = flask.session["oauth_token"]
+                if (
+                    "expires_at" in token
+                    and datetime.fromtimestamp(token["expires_at"]) < datetime.now()
+                ):
+                    # Token has expired, clear session and redirect to login
                     flask.session.clear()
                     return flask.redirect(
                         flask.url_for(".login", next=flask.request.url)
                     )
 
-            # Check for required scopes (if applicable)
-            # required_scopes = app.config.get('REQUIRED_SCOPES', [])
-            # if not all(scope in token.get('scope', '').split() for scope in required_scopes):
-            #     return flask.abort(403, description="Insufficient permissions")
+                # Optionally, refresh the token if it's close to expiration
+                if "expires_at" in token and datetime.fromtimestamp(
+                    token["expires_at"]
+                ) - datetime.now() < timedelta(minutes=5):
+                    try:
+                        github = OAuth2Session(
+                            self.client_id,
+                            state=flask.session["oauth_state"],
+                            redirect_uri="http://localhost:8010"
+                            + self.config.get("routes", {}).get(
+                                "callback", "/login/callback"
+                            ),
+                        )
+                        token = github.fetch_token(
+                            self.token_url,
+                            client_secret=self.client_secret,
+                            authorization_response=flask.request.url,
+                            expires_in=3600 * 2,
+                        )
+                        flask.session["oauth_token"] = token
+                    except Exception as e:
+                        app.logger.error(f"Token refresh failed: {str(e)}")
+                        flask.session.clear()
+                        return flask.redirect(
+                            flask.url_for(".login", next=flask.request.url)
+                        )
 
-            return func(*args, **kwargs)
+                # Check for required scopes (if applicable)
+                # required_scopes = app.config.get('REQUIRED_SCOPES', [])
+                # if not all(scope in token.get('scope', '').split() for scope in required_scopes):
+                #     return flask.abort(403, description="Insufficient permissions")
 
-        return wrapper
+                return func(*args, **kwargs)
+
+            return wrapper
 
 
 if __name__ == "__main__":

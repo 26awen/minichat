@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from users_admin.provides.userdata import Userdata
+from users_admin.provides.apptypes import WebFrameApp
+from users_admin.provides.providertpyes import ProviderType
 
 app = Flask(__name__)
 
@@ -19,8 +21,6 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_AUTHORIZATION_BASE_URL = os.getenv("GOOGLE_AUTHORIZATION_BASE_URL")
 GOOGLE_TOKEN_URL = os.getenv("GOOGLE_TOKEN_URL")
-
-WebFrameApp = Flask | FastHTML
 
 
 class GoogleOAuthMaker:
@@ -44,7 +44,7 @@ class GoogleOAuthMaker:
             metadata (dict): A dictionary to store OAuth-related metadata.
         """
         super().__init__(*args, **kwargs)
-        self.provider = "google"
+        self.provider: ProviderType = "google"
         self.app = app
         self.client_id = GOOGLE_CLIENT_ID
         self.client_secret = GOOGLE_CLIENT_SECRET
@@ -53,19 +53,20 @@ class GoogleOAuthMaker:
         self.config = config
         self.metadata = {}
         self.login_required = None
+        self.url_prefix = "/users"
 
     def make_oauth_routes(self):
         if isinstance(self.app, Flask):
 
             @self.app.route(
-                self.config.get("routes", {}).get("login", "/login")
+                self.url_prefix + self.config.get("routes", {}).get("login_action", "/login_action")
             )
-            def login():
-                """Step 1: User Authorization.
+            def login_action():
+                # Check if the user is already authenticated
+                if "oauth_token" in flask.session:
+                    flask.session.clear()
 
-                Redirect the user/resource owner to the OAuth provider (i.e. Github)
-                using an URL with a few key OAuth parameters.
-                """
+                # Step 1: User Authorization.
                 google = OAuth2Session(
                     self.client_id,
                     scope=[
@@ -73,7 +74,7 @@ class GoogleOAuthMaker:
                         "https://www.googleapis.com/auth/userinfo.profile",
                     ],
                     redirect_uri="http://localhost:8010"
-                    + self.config.get("routes", {}).get(
+                    + self.url_prefix + self.config.get("routes", {}).get(
                         "callback", "/login/callback"
                     ),
                 )
@@ -87,7 +88,7 @@ class GoogleOAuthMaker:
 
             # Step 2: User authorization, this happens on the provider.
             @self.app.route(
-                self.config.get("routes", {}).get(
+                self.url_prefix + self.config.get("routes", {}).get(
                     "callback", "/login/callback"
                 ),
                 methods=["GET"],
@@ -104,7 +105,7 @@ class GoogleOAuthMaker:
                     self.client_id,
                     state=flask.session["oauth_state"],
                     redirect_uri="http://localhost:8010"
-                    + self.config.get("routes", {}).get(
+                    + self.url_prefix + self.config.get("routes", {}).get(
                         "callback", "/login/callback"
                     ),
                 )
@@ -123,153 +124,150 @@ class GoogleOAuthMaker:
                 return flask.redirect(flask.url_for(".profile"))
 
             @self.app.route(
-                self.config.get("routes", {}).get("profile", "/profile"),
+                self.url_prefix + self.config.get("routes", {}).get("profile", "/profile"),
                 methods=["GET"],
             )
             def profile():
-                print(flask.session["oauth_token"])
                 """Fetching a protected resource using an OAuth 2 token."""
-                google = OAuth2Session(
-                    self.client_id, token=flask.session["oauth_token"]
-                )
-                return jsonify(
-                    google.get(
-                        "https://www.googleapis.com/oauth2/v1/userinfo"
-                    ).json()
-                )
+                try:
+                    google = OAuth2Session(
+                        self.client_id, token=flask.session["oauth_token"]
+                    )
+                    return jsonify(
+                        google.get(
+                            "https://www.googleapis.com/oauth2/v1/userinfo"
+                        ).json()
+                    )
+                except Exception as e:
+                    flask.session.clear()
+                    return flask.redirect(flask.url_for(".login_action"))
 
             @self.app.route(
-                self.config.get("routes", {}).get(
+                self.url_prefix + self.config.get("routes", {}).get("logout_action", "/logout_action"),
+                methods=["GET"],
+            )
+            def logout_action():
+                """Logout the user."""
+                if "oauth_token" in flask.session:
+                    # Google doesn't provide a specific endpoint to revoke tokens
+                    # You might want to implement additional logic here if needed
+                    pass
+                # Clear the local session
+                flask.session.clear()
+                # Redirect to home or login page
+                return flask.redirect(flask.url_for(".login_action"))
+
+            @self.app.route(
+                self.url_prefix + self.config.get("routes", {}).get(
+                    "get_userdata", "/get_userdata"
+                ),
+                methods=["GET"],
+            )
+            def get_userdata():
+                try:
+                    google = OAuth2Session(
+                        self.client_id, token=flask.session["oauth_token"]
+                    )
+                    user_info = google.get("https://www.googleapis.com/oauth2/v1/userinfo").json()
+                    provider = self.provider
+                    provider_user_id = str(user_info.get("id", ""))
+                    email = user_info.get("email", "")
+                    name = user_info.get("name", "")
+                    avatar_url = user_info.get("picture", "")
+                    provider_unique_id = provider + ":" + provider_user_id
+                    return Userdata(
+                        provider=provider,
+                        provider_user_id=provider_user_id,
+                        provider_unique_id=provider_unique_id,
+                        email=email,
+                        name=name,
+                        avatar_url=avatar_url,
+                    ).model_dump()
+                except Exception as e:
+                    flask.session.clear()
+                    return jsonify({"error": str(e)}), 500
+
+            @self.app.route(
+                self.url_prefix + self.config.get("routes", {}).get(
                     "profile_emails", "/profile/emails"
                 ),
                 methods=["GET"],
             )
             def profile_emails():
-                """Fetching a protected resource using an OAuth 2 token."""
-                google = OAuth2Session(
-                    self.client_id, token=flask.session["oauth_token"]
-                )
-                return jsonify(
-                    {
-                        "email": google.get(
-                            "https://www.googleapis.com/oauth2/v1/userinfo"
-                        )
-                        .json()
-                        .get("email", "")
-                    }
-                )
-
-            @self.app.route(
-                self.config.get("routes", {}).get("logout", "/logout"),
-                methods=["GET"],
-            )
-            def logout():
-                """Logout the user."""
-                google = OAuth2Session(
-                    self.client_id, token=flask.session["oauth_token"]
-                )
-                google.access_token = None
-                flask.session.clear()
-                return "Logged out"
-
-            @self.app.route(
-                self.config.get("routes", {}).get(
-                    "get_userdata", "/user/get_userdata"
-                ),
-                methods=["GET"],
-            )
-            def get_userdata():
-                """Get the user data."""
-                google = OAuth2Session(
-                    self.client_id, token=flask.session["oauth_token"]
-                )
-                provider = self.provider
-                provider_user_id = str(
-                    google.get("https://www.googleapis.com/oauth2/v1/userinfo")
-                    .json()
-                    .get("id", "")
-                )
-                provider_unique_id = provider + ":" + provider_user_id
-                email = (
-                    google.get("https://www.googleapis.com/oauth2/v1/userinfo")
-                    .json()
-                    .get("email", "")
-                )
-                name = (
-                    google.get("https://www.googleapis.com/oauth2/v1/userinfo")
-                    .json()
-                    .get("name", "")
-                )
-                avatar_url = (
-                    google.get("https://www.googleapis.com/oauth2/v1/userinfo")
-                    .json()
-                    .get("picture", "")
-                )
-                return Userdata(
-                    provider=provider,
-                    provider_user_id=provider_user_id,
-                    provider_unique_id=provider_unique_id,
-                    email=email,
-                    name=name,
-                    avatar_url=avatar_url,
-                ).model_dump_json()
-
-    def login_required(self, func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            # Check if the token exists
-            if "oauth_token" not in flask.session:
-                return flask.redirect(
-                    flask.url_for(".login", next=flask.request.url)
-                )
-
-            # Check token expiration
-            token = flask.session["oauth_token"]
-            if (
-                "expires_at" in token
-                and datetime.fromtimestamp(token["expires_at"]) < datetime.now()
-            ):
-                # Token has expired, clear session and redirect to login
-                flask.session.clear()
-                return flask.redirect(
-                    flask.url_for(".login", next=flask.request.url)
-                )
-
-            # Optionally, refresh the token if it's close to expiration
-            if "expires_at" in token and datetime.fromtimestamp(
-                token["expires_at"]
-            ) - datetime.now() < timedelta(minutes=5):
+                """Fetching user's email information using an OAuth 2 token."""
                 try:
                     google = OAuth2Session(
-                        self.client_id,
-                        state=flask.session["oauth_state"],
-                        redirect_uri="http://localhost:8010"
-                        + self.config.get("routes", {}).get(
-                            "callback", "/login/callback"
-                        ),
+                        self.client_id, token=flask.session["oauth_token"]
                     )
-                    token = google.fetch_token(
-                        self.token_url,
-                        client_secret=self.client_secret,
-                        authorization_response=flask.request.url,
-                        expires_in=3600 * 2,
-                    )
-                    flask.session["oauth_token"] = token
+                    user_info = google.get("https://www.googleapis.com/oauth2/v1/userinfo").json()
+                    # For Google, the email is typically included in the main user info
+                    # We'll return it in a format similar to GitHub's for consistency
+                    email_data = [{
+                        "email": user_info.get("email", ""),
+                        "primary": True,
+                        "verified": user_info.get("verified_email", False)
+                    }]
+                    return jsonify(email_data)
                 except Exception as e:
-                    app.logger.error(f"Token refresh failed: {str(e)}")
+                    flask.session.clear()
+                    return flask.redirect(flask.url_for(".login_action"))
+
+        def login_required(self, func):
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                # Check if the token exists
+                if "oauth_token" not in flask.session:
+                    return flask.redirect(
+                        flask.url_for(".login_action", next=flask.request.url)
+                    )
+
+                # Check token expiration
+                token = flask.session["oauth_token"]
+                if (
+                    "expires_at" in token
+                    and datetime.fromtimestamp(token["expires_at"]) < datetime.now()
+                ):
+                    # Token has expired, clear session and redirect to login
                     flask.session.clear()
                     return flask.redirect(
-                        flask.url_for(".login", next=flask.request.url)
+                        flask.url_for(".login_action", next=flask.request.url)
                     )
 
-            # Check for required scopes (if applicable)
-            # required_scopes = app.config.get('REQUIRED_SCOPES', [])
-            # if not all(scope in token.get('scope', '').split() for scope in required_scopes):
-            #     return flask.abort(403, description="Insufficient permissions")
+                # Optionally, refresh the token if it's close to expiration
+                if "expires_at" in token and datetime.fromtimestamp(
+                    token["expires_at"]
+                ) - datetime.now() < timedelta(minutes=5):
+                    try:
+                        google = OAuth2Session(
+                            self.client_id,
+                            state=flask.session["oauth_state"],
+                            redirect_uri="http://localhost:8010"
+                            + self.config.get("routes", {}).get(
+                                "callback", "/login/callback"
+                            ),
+                        )
+                        token = google.fetch_token(
+                            self.token_url,
+                            client_secret=self.client_secret,
+                            authorization_response=flask.request.url,
+                            expires_in=3600 * 2,
+                        )
+                        flask.session["oauth_token"] = token
+                    except Exception as e:
+                        app.logger.error(f"Token refresh failed: {str(e)}")
+                        flask.session.clear()
+                        return flask.redirect(
+                            flask.url_for(".login_action", next=flask.request.url)
+                        )
 
-            return func(*args, **kwargs)
+                # Check for required scopes (if applicable)
+                # required_scopes = app.config.get('REQUIRED_SCOPES', [])
+                # if not all(scope in token.get('scope', '').split() for scope in required_scopes):
+                #     return flask.abort(403, description="Insufficient permissions")
 
-        return wrapper
+                return func(*args, **kwargs)
+
+            return wrapper
 
 
 if __name__ == "__main__":

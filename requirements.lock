@@ -126,6 +126,8 @@ packaging==24.1
     # via huggingface-hub
 prettytable==3.11.0
     # via unicon-plugins
+psycopg2==2.9.9
+    # via minichat
 pydantic==2.7.1
     # via anthropic
     # via minichat
