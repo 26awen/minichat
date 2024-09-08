@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# import requests
+import requests
 import httpx
 from starlette.responses import StreamingResponse
 from .custom_css import custom_css
@@ -71,7 +71,7 @@ def Chat_output():
         rows=12,
         cols=50,
         readonly=True,
-        style="resize: none; width: 100%; height: 450px;",
+        style="resize: none; width: 100%; height: 450px; background-color: #f0f0f0; font-size: 12px;",
     )
 
 
@@ -216,13 +216,28 @@ async def chat(req):
     url = os.getenv("BACKEND_URL")
     print(re_post)
 
-    async def proxy_generator(url, data):
-        async with httpx.AsyncClient() as client:
-            async with client.stream("POST", url, json=data) as response:
-                async for line in response.aiter_lines():
-                    if line:
-                        # 假设响应是UTF-8编码的
-                        yield line.encode("utf-8") + b"\n"
+    def proxy_generator(url, data):
+        # async with httpx.AsyncClient() as client:
+        #     async with client.stream("POST", url, json=data) as response:
+        #         async for line in response.aiter_lines():
+        #             if line:
+        #                 # 假设响应是UTF-8编码的
+        #                 yield line.encode("utf-8") + b"\n"
+        with requests.post(url, json=data, stream=True) as response:
+            for line in response.iter_lines():
+                if line:
+                    # Assuming the response is UTF-8 encoded
+                    yield line.decode('utf-8').encode('utf-8') + b'\n'
+                    
+    # It has some bug when called from frontend, so use the sync version for now
+    # async def proxy_generator_async(url, data):
+    #     async with httpx.AsyncClient() as client:
+    #         async with client.stream("POST", url, json=data) as response:
+    #             async for line in response.aiter_lines():
+    #                 if line:
+    #                     # 假设响应是UTF-8编码的
+    #                     yield line.encode("utf-8") + b"\n"
+
 
     return StreamingResponse(proxy_generator(url, re_post), media_type="text/plain")
 

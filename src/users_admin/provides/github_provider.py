@@ -2,7 +2,6 @@ import os
 from functools import wraps
 from datetime import datetime, timedelta
 from requests_oauthlib import OAuth2Session
-from fasthtml import FastHTML
 from flask import Flask
 import flask
 from flask.json import jsonify
@@ -10,6 +9,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 from users_admin.provides.userdata import Userdata
+from users_admin.provides.apptypes import WebFrameApp
+from users_admin.provides.providertpyes import ProviderType
 
 app = Flask(__name__)
 
@@ -19,7 +20,7 @@ GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
 GITHUB_AUTHORIZATION_BASE_URL = os.getenv("GITHUB_AUTHORIZATION_BASE_URL")
 GITHUB_TOKEN_URL = os.getenv("GITHUB_TOKEN_URL")
 
-WebFrameApp = Flask | FastHTML
+
 
 
 class GithubOAuthMaker:
@@ -27,15 +28,15 @@ class GithubOAuthMaker:
         """
         Initialize the GithubOAuthMaker.
 
-        This class sets up OAuth2 authentication with GitHub for a Flask application.
+        This class sets up OAuth2 authentication with GitHub for a WebFrameApp application.
 
         Args:
-            app (Flask): The Flask application instance.
+            app (WebFrameApp): The WebFrameApp application instance.
             *args: Variable length argument list.
             **kwargs: Arbitrary keyword arguments.
 
         Attributes:
-            app (Flask): The Flask application instance.
+            app (WebFrameApp): The WebFrameApp application instance.
             client_id (str): GitHub OAuth client ID.
             client_secret (str): GitHub OAuth client secret.
             authorization_base_url (str): GitHub's authorization URL.
@@ -43,7 +44,7 @@ class GithubOAuthMaker:
             metadata (dict): A dictionary to store OAuth-related metadata.
         """
         super().__init__(*args, **kwargs)
-        self.provider = "github"
+        self.provider: ProviderType = "github"
         self.app = app
         self.client_id = GITHUB_CLIENT_ID
         self.client_secret = GITHUB_CLIENT_SECRET
@@ -51,20 +52,21 @@ class GithubOAuthMaker:
         self.token_url = GITHUB_TOKEN_URL
         self.config = config
         self.metadata = {}
-        self.login_required = None
 
     def make_oauth_routes(self):
+        """
+        Make OAuth routes for GitHub authentication.
+        """
         if isinstance(self.app, Flask):
 
             @self.app.route(
                 self.config.get("routes", {}).get("login", "/login")
             )
             def login():
-                """Step 1: User Authorization.
+                # Step 1: User Authorization.
 
-                Redirect the user/resource owner to the OAuth provider (i.e. Github)
-                using an URL with a few key OAuth parameters.
-                """
+                # Redirect the user/resource owner to the OAuth provider (i.e. Github)
+                # using an URL with a few key OAuth parameters.
                 github = OAuth2Session(self.client_id, scope=["user:email"])
                 authorization_url, state = github.authorization_url(
                     self.authorization_base_url
@@ -82,12 +84,11 @@ class GithubOAuthMaker:
                 methods=["GET"],
             )
             def callback():
-                """Step 3: Retrieving an access token.
+                # Step 3: Retrieving an access token.
 
-                The user has been redirected back from the provider to your registered
-                callback URL. With this redirection comes an authorization code included
-                in the redirect URL. We will use that to obtain an access token.
-                """
+                # The user has been redirected back from the provider to your registered
+                # callback URL. With this redirection comes an authorization code included
+                # in the redirect URL. We will use that to obtain an access token.
 
                 github = OAuth2Session(
                     self.client_id,

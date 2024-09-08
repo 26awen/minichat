@@ -25,6 +25,7 @@ anyio==4.3.0
     # via openai
     # via starlette
     # via watchfiles
+basedpyright==1.17.2
 beautifulsoup4==4.12.3
     # via python-fasthtml
 blinker==1.8.2
@@ -115,6 +116,8 @@ markupsafe==2.1.5
     # via werkzeug
 mdurl==0.1.2
     # via markdown-it-py
+nodejs-wheel-binaries==20.17.0
+    # via basedpyright
 oauthlib==3.2.2
     # via python-fasthtml
     # via requests-oauthlib
