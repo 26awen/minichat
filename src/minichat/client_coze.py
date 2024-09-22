@@ -89,3 +89,66 @@ class ClientCoze(ClientBaseDB):
         else:
             self.add_line(user_id, t_id, role, content)
             self.add_line(user_id, t_id, "assistant", assistant_msg)
+        
+    def make_chat_json(self, history_msgs: Any, user_id: int, t_id: int, role: str, content: str):
+        logger.opt(colors=True).debug(
+            mwrapper(f"Chat with config:{self.cfig}", "green")
+        )
+
+        end_point = "https://api.coze.com/open_api/v2/chat"
+
+        headers = {
+            "Authorization" : f"Bearer {self.cfig.cfig_coze.bearer_token}",
+            "Content-Type" : "application/json",
+            "Connection" : "keep-alive",
+            "Accept" : "*/*"
+        }
+
+        body = {
+            "bot_id": self.cfig.cfig_coze.bot_id,
+            "user": "user",
+            "query": content,
+            "stream": True,
+            "chat_history": history_msgs
+        }
+
+        logger.opt(colors=True).debug(
+            mwrapper("History messages include the new request message:", "green")
+        )
+        logger.opt(colors=True).debug(history_msgs)
+
+        assistant_msg = ""
+        try:
+            resp = requests.post(end_point, headers=headers, json=body, stream=True)
+            # print(f"resp.status_code: {resp.status_code}")
+            if resp.status_code == 200:
+                for line in resp.iter_lines():
+                    if line:
+                        # print(f"line: {line}")
+                        data = json.loads(line.decode("utf8")[5:])
+                        if data.get("is_finish") is not None and (not data["is_finish"]):
+                            # print("ererererer")
+                            assistant_msg += data["message"]["content"]
+                            yield json.dumps({
+                                "chunk": data["message"]["content"],
+                                "user_id": user_id,
+                                "t_id": t_id
+                            }) + "\n"
+            else:
+                raise Exception(f"HTTP error: {resp.status_code}")
+        except Exception as e:
+            logger.error("Error when chatting!")
+            logger.error(e)
+            yield json.dumps({
+                "error": str(e),
+                "user_id": user_id,
+                "t_id": t_id
+            }) + "\n"
+        else:
+            self.add_line(user_id, t_id, role, content)
+            self.add_line(user_id, t_id, "assistant", assistant_msg)
+            yield json.dumps({
+                "final": True,
+                "user_id": user_id,
+                "t_id": t_id
+            }) + "\n"
