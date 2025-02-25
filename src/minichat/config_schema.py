@@ -9,29 +9,35 @@ from pydantic import ConfigDict
 """
 Config before any input
 """
+
+
 class AiModels(Enum):
     NOMODEL = ""
     GPT4O = "gpt-4o"
-    CLAUDE35  = "claude-3-5-sonnet-20240620"
+    CLAUDE35 = "claude-3-7-sonnet-20250219"
     GPT4OMINI = "gpt-4o-mini"
     GPT35T = "gpt-3.5-turbo"
     SILI = "deepseek-ai/deepseek-coder-v2-Instruct"
     ll3 = "llama3-70b-8192"
+
 
 class AiRoles(Enum):
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
 
+
 class ClientType(Enum):
     OPENAI = "openai"
     COZE = "coze"
     CLAUDE = "claude"
 
+
 class CfigServre(BaseModel):
     host: str
     port: int
     secret: str
+
 
 class CfigCoze(BaseModel):
     end_point: str
@@ -42,6 +48,7 @@ class CfigCoze(BaseModel):
     bot_id: str
     user: str
 
+
 class CfigOpenai(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
     ai_model: AiModels
@@ -51,6 +58,7 @@ class CfigOpenai(BaseModel):
     @property
     def model(self):
         return str(self.ai_model)
+
 
 class CfigClaude(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
@@ -65,13 +73,13 @@ class CfigClaude(BaseModel):
 
 class Config(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
-    
+
     client_type: ClientType
-    
-    cfig_openai: CfigOpenai 
+
+    cfig_openai: CfigOpenai
     cfig_coze: CfigCoze
     cfig_claude: CfigClaude
-    
+
     server: CfigServre
 
     @classmethod

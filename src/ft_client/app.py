@@ -16,7 +16,6 @@ from .custom_css import custom_css
 from .custom_js import custom_js
 
 
-
 # App with custom styling to override the pico defaults
 css = Style(custom_css)
 js_stream_handler = Script(custom_js)
@@ -26,7 +25,7 @@ app = FastHTML(hdrs=(picolink, css, js_stream_handler))
 def Dropdown_clienttype():
     return Select(
         Option("openai-gpt-4o-mini", value="openai"),
-        Option("claude-3-5-sonnet-20240620", value="claude"),
+        Option("claude-3-7-sonnet-20250219", value="claude"),
         Option("coze-gpt-4o", value="coze"),
         id="dropdown_clienttype",
     )
@@ -139,7 +138,7 @@ def Login_dropdown():
             cls="dropdown-content",
         ),
         cls="dropdown",
-        style="position: absolute; top: 10px; right: 10px;"
+        style="position: absolute; top: 10px; right: 10px;",
     )
 
 
@@ -162,7 +161,7 @@ def home():
             ),
             Hr(),
             cls="container",
-            style="position: relative;"  # Add this to make absolute positioning work
+            style="position: relative;",  # Add this to make absolute positioning work
         ),
         Div(
             Div(
@@ -204,7 +203,7 @@ def home():
                 "?",
                 href="/help",
                 cls="button help-button",
-                style="position: fixed; bottom: 12px; right: 12px; background-color: #4a9eff; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease; text-decoration: none;"
+                style="position: fixed; bottom: 12px; right: 12px; background-color: #4a9eff; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease; text-decoration: none;",
             ),
             cls="container",
         ),
@@ -245,8 +244,8 @@ async def chat(req):
             for line in response.iter_lines():
                 if line:
                     # Assuming the response is UTF-8 encoded
-                    yield line.decode('utf-8').encode('utf-8') + b'\n'
-                    
+                    yield line.decode("utf-8").encode("utf-8") + b"\n"
+
     # It has some bug when called from frontend, so use the sync version for now
     # async def proxy_generator_async(url, data):
     #     async with httpx.AsyncClient() as client:
@@ -255,7 +254,6 @@ async def chat(req):
     #                 if line:
     #                     # 假设响应是UTF-8编码的
     #                     yield line.encode("utf-8") + b"\n"
-
 
     return StreamingResponse(proxy_generator(url, re_post), media_type="text/plain")
 
@@ -276,3 +274,4 @@ async def get(fname: str, ext: str):
 #         return RedirectResponse(url=google_provider.get_authorization_url())
 #     else:
 #         return {"error": "Invalid provider"}
+
